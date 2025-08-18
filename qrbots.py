@@ -16,7 +16,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Token del bot
-TOKEN = "8394022578:AAEK1TmcGmpdrGHci98RhTUecAlSAo4xYko"
+TOKEN = "AQUI_TOKEN"
 
 # ID del administrador
 ADMIN_ID = 8113919663
