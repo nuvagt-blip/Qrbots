@@ -16,7 +16,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Token del bot
-TOKEN = "TELEGRAM_TOKEN_QR"
+TOKEN = "TOKEN"
 
 # ID del administrador
 ADMIN_ID = 8113919663
