@@ -1,6 +1,7 @@
 import logging
 import re
 from io import BytesIO
+import os
 try:
     from PIL import Image
 except ImportError:
@@ -9,7 +10,7 @@ except ImportError:
 try:
     from pyzbar.pyzbar import decode
 except ImportError:
-    print("Error: pyzbar is not installed. Run 'pip install pyzbar' and ensure libzbar is installed.")
+    print("Error: pyzbar is not installed. Run 'pip install pyzbar' and ensure libzbar is installed (e.g., 'apt-get install libzbar0' on Debian-based systems).")
     exit(1)
 try:
     import qrcode
@@ -19,16 +20,20 @@ except ImportError:
 try:
     from telegram.ext import Application, CommandHandler, MessageHandler, filters
 except ImportError:
-    print("Error: python-telegram-bot is not installed. Run 'pip install python-telegram-bot' to resolve.")
+    print("Error: python-telegram-bot is not installed. Run 'pip install python-telegram-bot>=21.0' to resolve.")
     exit(1)
+
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-TOKEN = '8433651914:AAFbaeXrXP17WURqLpzY9p5lLYQap37VzaM'
-OWNER_IDS = {6563471310, 8058901135,7599661912}
+
+# Use environment variable for token (recommended for Zeabur)
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '8433651914:AAFbaeXrXP17WURqLpzY9p5lLYQap37VzaM')  # Updated with provided token
+OWNER_IDS = {6563471310, 8058901135, 7599661912}
 is_on = False
 allowed_users = set()
 allowed_groups = set()
+
 def parse_emv(data: str) -> dict:
     i = 0
     result = {}
@@ -50,6 +55,7 @@ def parse_emv(data: str) -> dict:
         i += length
         result[tag] = value
     return result
+
 async def start(update, context):
     user = update.message.from_user
     user_id = user.id
@@ -71,7 +77,8 @@ async def start(update, context):
             await update.message.reply_text(welcome_message, parse_mode='Markdown')
         else:
             await update.message.reply_text(
-                '🚫 Este grupo no está autorizado para usar el bot. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+                '🚫 Este grupo no está autorizado para usar el bot. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+                parse_mode='Markdown'
             )
     else:
         if is_on or user_id in OWNER_IDS or user_id in allowed_users:
@@ -89,11 +96,12 @@ async def start(update, context):
             )
             welcome_message = base_welcome + off_message
             await update.message.reply_text(welcome_message, parse_mode='Markdown')
+
 async def group_added(update, context):
     if update.message.chat.type in ['group', 'supergroup']:
         chat_id = update.message.chat_id
         chat_title = update.message.chat.title or "Grupo"
-        allowed_groups.add(chat_id) # Automatically allow the group
+        allowed_groups.add(chat_id)  # Automatically allow the group
         welcome_message = (
             f"👋 ¡Hola, {chat_title}! 🎉\n"
             f"🆔 ID del grupo: `{chat_id}`\n"
@@ -104,21 +112,25 @@ async def group_added(update, context):
         )
         await update.message.reply_text(welcome_message, parse_mode='Markdown')
         logger.info(f"Bot added to group {chat_id} ({chat_title})")
+
 async def qrbin(update, context):
     user_id = update.message.from_user.id
     chat_id = update.message.chat_id
     if not (is_on or user_id in OWNER_IDS or user_id in allowed_users or chat_id in allowed_groups):
         await update.message.reply_text(
-            '🚫 No estás autorizado para usar este bot. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+            '🚫 No estás autorizado para usar este bot. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+            parse_mode='Markdown'
         )
         return
     await update.message.reply_text("📷 Por favor, envía la imagen del código QR como respuesta a este mensaje.")
+
 async def qrgen(update, context):
     user_id = update.message.from_user.id
     chat_id = update.message.chat_id
     if not (is_on or user_id in OWNER_IDS or user_id in allowed_users or chat_id in allowed_groups):
         await update.message.reply_text(
-            '🚫 No estás autorizado para usar este bot. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+            '🚫 No estás autorizado para usar este bot. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+            parse_mode='Markdown'
         )
         return
     if context.args:
@@ -139,6 +151,7 @@ async def qrgen(update, context):
             await update.message.reply_text('❌ Error al generar el QR. Intenta de nuevo.')
     else:
         await update.message.reply_text('📝 Uso: /qrgen <datos para el QR>')
+
 async def on_command(update, context):
     if update.message.from_user.id in OWNER_IDS:
         global is_on
@@ -147,8 +160,10 @@ async def on_command(update, context):
         logger.info("Bot turned ON by owner")
     else:
         await update.message.reply_text(
-            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+            parse_mode='Markdown'
         )
+
 async def off_command(update, context):
     if update.message.from_user.id in OWNER_IDS:
         global is_on
@@ -157,8 +172,10 @@ async def off_command(update, context):
         logger.info("Bot turned OFF by owner")
     else:
         await update.message.reply_text(
-            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+            parse_mode='Markdown'
         )
+
 async def agregar(update, context):
     if update.message.from_user.id in OWNER_IDS:
         if context.args:
@@ -173,8 +190,10 @@ async def agregar(update, context):
             await update.message.reply_text('📝 Uso: /agregar <user_id>')
     else:
         await update.message.reply_text(
-            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+            parse_mode='Markdown'
         )
+
 async def agregargrupo(update, context):
     if update.message.from_user.id in OWNER_IDS:
         if context.args:
@@ -192,8 +211,10 @@ async def agregargrupo(update, context):
             await update.message.reply_text('📝 Uso: /agregargrupo <group_id>')
     else:
         await update.message.reply_text(
-            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+            parse_mode='Markdown'
         )
+
 async def eliminargrupo(update, context):
     if update.message.from_user.id in OWNER_IDS:
         if context.args:
@@ -214,15 +235,18 @@ async def eliminargrupo(update, context):
             await update.message.reply_text('📝 Uso: /eliminargrupo <group_id>')
     else:
         await update.message.reply_text(
-            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+            '🚫 Solo los propietarios pueden usar este comando. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+            parse_mode='Markdown'
         )
+
 async def handle_photo(update, context):
     user_id = update.message.from_user.id
     chat_id = update.message.chat_id
     is_authorized = is_on or user_id in OWNER_IDS or user_id in allowed_users or chat_id in allowed_groups
     if not is_authorized:
         await update.message.reply_text(
-            '🚫 No estás autorizado para usar este bot. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩'
+            '🚫 No estás autorizado para usar este bot. Contacta a [@Teampaz2](https://t.me/Teampaz2) o [@ninja_ofici4l](https://t.me/ninja_ofici4l) para más información. 📩',
+            parse_mode='Markdown'
         )
         return
     await update.message.reply_text('📦 Escaneando la imagen...')
@@ -253,13 +277,13 @@ async def handle_photo(update, context):
         platform = 'Desconocida'
         number = 'N/A'
         name = 'N/A'
-        location = 'Bogotá' # Default to Bogotá if no location data
+        location = 'Bogotá'  # Default to Bogotá if no location data
         dni = 'N/A'
         lower_data = data.lower()
         # Regex patterns
-        phone_regex = r'(?:(?:\+57|57)|0)?3[0-9]{9}'
-        account_regex = r'\d{10,16}'
-        dni_regex = r'\d{7,10}'
+        phone_regex = r'(?:(?:\+57|57)|0)?3[0-9]{9}\b'
+        account_regex = r'\b\d{10,16}\b'
+        dni_regex = r'\b\d{7,10}\b'
         if 'nequi' in lower_data:
             platform = 'Nequi'
         elif 'bancolombia' in lower_data:
@@ -331,10 +355,11 @@ async def handle_photo(update, context):
             f'🪪 **DNI**: {dni}'
         )
         await update.message.reply_text(response, parse_mode='Markdown')
-        logger.info(f"QR processed successfully for user {user_id} in chat {chat_id}")
+        logger.info against(f"QR processed successfully for user {user_id} in chat {chat_id}")
     except Exception as e:
         logger.error(f"Unexpected error in handle_photo: {e}")
         await update.message.reply_text('❌ Error inesperado al procesar la imagen. Intenta de nuevo. 📸')
+
 def main():
     try:
         app = Application.builder().token(TOKEN).build()
@@ -349,9 +374,10 @@ def main():
         app.add_handler(CommandHandler('eliminargrupo', eliminargrupo))
         app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
         logger.info("Starting bot...")
-        app.run_polling()
+        app.run_polling(allowed_updates=['message', 'chat_member'])
     except Exception as e:
         logger.error(f"Failed to start bot: {e}")
         print(f"Error: Failed to start bot: {e}")
+
 if __name__ == '__main__':
     main()
