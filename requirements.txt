@@ -1,2 +1,6 @@
-python-telegram-bot==20.7
-requests==2.31.0
+python-telegram-bot>=21.4
+Pillow>=10.4.0
+requests>=2.32.3
+pyzbar>=0.1.8
+qrcode>=7.3.1
+pytz>=2024.1
