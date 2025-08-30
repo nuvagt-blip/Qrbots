@@ -63,6 +63,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def qrgen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
+    # Verifica si el bot está activo
+    if BOT_STATUS != "active":
+        await update.message.reply_text("⛔ El bot está apagado. Contacta al administrador para activarlo. 🔧")
+        return
     # Verifica si el usuario o grupo está autorizado
     if user_id not in AUTHORIZED_USERS and chat_id not in AUTHORIZED_GROUPS:
         await update.message.reply_text(
@@ -94,6 +98,15 @@ async def authorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❌ Error: ID inválido. Usa un número para usuarios o 'group' para grupos. 🔍")
 
+# Comando /agregargrupo (alias para /authorize group)
+async def agregargrupo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        return
+    group_id = update.effective_chat.id
+    AUTHORIZED_GROUPS.add(group_id)
+    await update.message.reply_text(f"✅ ¡Grupo {group_id} autorizado con éxito! 🎉")
+
 # Comando /deauthorize (solo para el admin)
 async def deauthorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -114,10 +127,54 @@ async def deauthorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❌ Error: ID inválido. Usa un número para usuarios o 'group' para grupos. 🔍")
 
+# Comando /verusuarios (solo para el admin)
+async def verusuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        return
+    if not AUTHORIZED_USERS:
+        await update.message.reply_text("📋 No hay usuarios autorizados.")
+        return
+    users_list = "\n".join([f"ID: {user_id}" for user_id in AUTHORIZED_USERS])
+    await update.message.reply_text(f"📋 Usuarios autorizados:\n{users_list}")
+
+# Comando /vergrupos (solo para el admin)
+async def vergrupos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        return
+    if not AUTHORIZED_GROUPS:
+        await update.message.reply_text("📋 No hay grupos autorizados.")
+        return
+    groups_list = "\n".join([f"ID: {group_id}" for group_id in AUTHORIZED_GROUPS])
+    await update.message.reply_text(f"📋 Grupos autorizados:\n{groups_list}")
+
+# Comando /on (solo para el admin)
+async def turn_on(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global BOT_STATUS
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        return
+    BOT_STATUS = "active"
+    await update.message.reply_text("✅ Bot encendido. Sistemas operacionales están activos. 🚀")
+
+# Comando /off (solo para el admin)
+async def turn_off(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global BOT_STATUS
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        return
+    BOT_STATUS = "inactive"
+    await update.message.reply_text("✅ Bot apagado. Sistemas operacionales están inactivos. 🛑")
+
 # Manejar imágenes con códigos QR usando API externa
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
+    # Verifica si el bot está activo
+    if BOT_STATUS != "active":
+        await update.message.reply_text("⛔ El bot está apagado. Contacta al administrador para activarlo. 🔧")
+        return
     # Verifica si el usuario o grupo está autorizado
     if user_id not in AUTHORIZED_USERS and chat_id not in AUTHORIZED_GROUPS:
         await update.message.reply_text(
@@ -170,7 +227,12 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("qrgen", qrgen))
     application.add_handler(CommandHandler("authorize", authorize))
+    application.add_handler(CommandHandler("agregargrupo", agregargrupo))
     application.add_handler(CommandHandler("deauthorize", deauthorize))
+    application.add_handler(CommandHandler("verusuarios", verusuarios))
+    application.add_handler(CommandHandler("vergrupos", vergrupos))
+    application.add_handler(CommandHandler("on", turn_on))
+    application.add_handler(CommandHandler("off", turn_off))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_error_handler(error_handler)
     # Inicia el bot
