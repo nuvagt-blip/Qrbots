@@ -1,27 +1,32 @@
 import logging
 import re
+import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import requests
+
 # Configura el logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
     handlers=[
-        logging.FileHandler("bot.log"), # Guarda logs en un archivo
-        logging.StreamHandler() # Muestra logs en consola
+        logging.FileHandler("bot.log"),  # Guarda logs en un archivo
+        logging.StreamHandler()  # Muestra logs en consola
     ]
 )
 logger = logging.getLogger(__name__)
-# Token del bot
-TOKEN = "8146061705:AAEYuDB4QxIdZ9Vvhg5XGg4tSMd8qpzEnlE"
-# ID del administrador
-ADMIN_ID = 8113919663
+
+# Token del bot y ID del administrador desde variables de entorno
+TOKEN = os.getenv("BOT_TOKEN", "8146061705:AAEYuDB4QxIdZ9Vvhg5XGg4tSMd8qpzEnlE")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "8113919663"))
+
 # Lista de usuarios y grupos autorizados
-AUTHORIZED_USERS = {8113919663} # Incluye al admin por defecto
-AUTHORIZED_GROUPS = set() # Grupos autorizados
+AUTHORIZED_USERS = {ADMIN_ID}  # Incluye al admin por defecto
+AUTHORIZED_GROUPS = set()  # Grupos autorizados
+
 # Estado del bot
 BOT_STATUS = "active"  # Puede ser "active" o "inactive"
+
 # Mensaje de bienvenida (accesible para todos)
 WELCOME_MESSAGE = (
     "👑 ¡Bienvenid@ al Bot Profesional de Lectura de Códigos QR creado por @Sangre_binerojs! 👑\n"
@@ -31,15 +36,17 @@ WELCOME_MESSAGE = (
     "⚙️ Usa el comando /qrgen para enviar una imagen de código QR y extraer su contenido.\n"
     "⚠️ Nota: La lectura de códigos QR está disponible solo para usuarios o grupos autorizados por el administrador."
 )
+
 # Función para extraer el nombre del contenido del QR
 def extract_name(qr_content):
     # Busca el campo 59 (nombre en el estándar QR de Nequi)
     match = re.search(r'59(\d{2})([A-Z\s]+)', qr_content)
     if match:
-        name_length = int(match.group(1)) # Longitud del nombre
-        name = match.group(2)[:name_length] # Extrae el nombre
+        name_length = int(match.group(1))  # Longitud del nombre
+        name = match.group(2)[:name_length]  # Extrae el nombre
         return name.strip()
     return None
+
 # Comando /start (accesible para todos)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -51,6 +58,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         WELCOME_MESSAGE.format(status_message=status_message, user_id=user_id, username=username)
     )
+
 # Comando /qrgen (verifica autorización y pide la imagen)
 async def qrgen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -65,6 +73,7 @@ async def qrgen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "✅ Por favor, envía la imagen del código QR (por ejemplo, de Nequi o Bancolombia) para extraer el nombre asociado. 📸"
     )
+
 # Comando /authorize (solo para el admin)
 async def authorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -84,6 +93,7 @@ async def authorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"✅ ¡Usuario {user_id} autorizado con éxito! 🎉")
     except ValueError:
         await update.message.reply_text("❌ Error: ID inválido. Usa un número para usuarios o 'group' para grupos. 🔍")
+
 # Comando /deauthorize (solo para el admin)
 async def deauthorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -103,6 +113,7 @@ async def deauthorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"✅ ¡Usuario {user_id} desautorizado con éxito! 🚫")
     except ValueError:
         await update.message.reply_text("❌ Error: ID inválido. Usa un número para usuarios o 'group' para grupos. 🔍")
+
 # Manejar imágenes con códigos QR usando API externa
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -145,11 +156,13 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error al procesar la imagen: {e}")
         await update.message.reply_text("❌ Error al procesar la imagen. Asegúrate de enviar una imagen válida con un código QR. 📷")
+
 # Manejar errores generales
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Error: {context.error}")
     if update and update.message:
         await update.message.reply_text("❌ Ocurrió un error inesperado. Por favor, intenta de nuevo o contacta a @Sangre_binerojs. 🛠️")
+
 def main():
     # Crea la aplicación del bot
     application = Application.builder().token(TOKEN).build()
@@ -162,5 +175,6 @@ def main():
     application.add_error_handler(error_handler)
     # Inicia el bot
     application.run_polling()
+
 if __name__ == "__main__":
     main()
