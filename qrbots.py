@@ -10,24 +10,23 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
     handlers=[
-        logging.FileHandler("bot.log"),  # Guarda logs en un archivo
-        logging.StreamHandler()  # Muestra logs en consola
+        logging.FileHandler("bot.log"),
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
-# Token del bot y ID del administrador desde variables de entorno
-TOKEN = os.getenv("BOT_TOKEN", "8146061705:AAEYuDB4QxIdZ9Vvhg5XGg4tSMd8qpzEnlE")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "8113919663"))
+# ⚠️ Token directo en el código (porque el repo es privado)
+TOKEN = "AQUI_VA_TU_TOKEN"  
+ADMIN_ID = 8113919663  # tu ID de admin fijo
 
 # Lista de usuarios y grupos autorizados
-AUTHORIZED_USERS = {ADMIN_ID}  # Incluye al admin por defecto
-AUTHORIZED_GROUPS = set()  # Grupos autorizados
+AUTHORIZED_USERS = {ADMIN_ID}
+AUTHORIZED_GROUPS = set()
 
 # Estado del bot
-BOT_STATUS = "active"  # Puede ser "active" o "inactive"
+BOT_STATUS = "active"
 
-# Mensaje de bienvenida (accesible para todos)
 WELCOME_MESSAGE = (
     "👑 ¡Bienvenid@ al Bot Profesional de Lectura de Códigos QR creado por @Sangre_binerojs! 👑\n"
     "✨ Estado del sistema: {status_message}\n"
@@ -37,51 +36,40 @@ WELCOME_MESSAGE = (
     "⚠️ Nota: La lectura de códigos QR está disponible solo para usuarios o grupos autorizados por el administrador."
 )
 
-# Función para extraer el nombre del contenido del QR
-def extract_name(qr_content):
-    # Busca el campo 59 (nombre en el estándar QR de Nequi)
+def extract_name(qr_content: str):
     match = re.search(r'59(\d{2})([A-Z\s]+)', qr_content)
     if match:
-        name_length = int(match.group(1))  # Longitud del nombre
-        name = match.group(2)[:name_length]  # Extrae el nombre
+        name_length = int(match.group(1))
+        name = match.group(2)[:name_length]
         return name.strip()
     return None
 
-# Comando /start (accesible para todos)
+# /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
     username = f"@{user.username}" if user.username else user.first_name
-    # Determina el mensaje de estado del bot
     status_message = "Sistemas operacionales están activos. ✅" if BOT_STATUS == "active" else "Sistemas operacionales están apagados. 🚫"
-    # Envía mensaje de bienvenida
     await update.message.reply_text(
         WELCOME_MESSAGE.format(status_message=status_message, user_id=user_id, username=username)
     )
 
-# Comando /qrgen (verifica autorización y pide la imagen)
+# /qrgen
 async def qrgen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    # Verifica si el bot está activo
     if BOT_STATUS != "active":
-        await update.message.reply_text("⛔ El bot está apagado. Contacta al administrador para activarlo. 🔧")
+        await update.message.reply_text("⛔ El bot está apagado. Contacta al administrador. 🔧")
         return
-    # Verifica si el usuario o grupo está autorizado
     if user_id not in AUTHORIZED_USERS and chat_id not in AUTHORIZED_GROUPS:
-        await update.message.reply_text(
-            "⛔ Acceso denegado. Solo usuarios o grupos autorizados pueden usar esta función. Contacta a @Sangre_binerojs para obtener acceso. 📩"
-        )
+        await update.message.reply_text("⛔ Acceso denegado. Contacta a @Sangre_binerojs 📩")
         return
-    # Pide la imagen
-    await update.message.reply_text(
-        "✅ Por favor, envía la imagen del código QR (por ejemplo, de Nequi o Bancolombia) para extraer el nombre asociado. 📸"
-    )
+    await update.message.reply_text("✅ Envía la imagen del código QR para extraer el contenido. 📸")
 
-# Comando /authorize (solo para el admin)
+# /authorize
 async def authorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        await update.message.reply_text("⛔ Solo el administrador puede usar este comando. 🔒")
         return
     if not context.args:
         await update.message.reply_text("📋 Uso: /authorize <user_id> o /authorize group")
@@ -90,27 +78,27 @@ async def authorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if context.args[0].lower() == "group":
             group_id = update.effective_chat.id
             AUTHORIZED_GROUPS.add(group_id)
-            await update.message.reply_text(f"✅ ¡Grupo {group_id} autorizado con éxito! 🎉")
+            await update.message.reply_text(f"✅ Grupo {group_id} autorizado 🎉")
         else:
             user_id = int(context.args[0])
             AUTHORIZED_USERS.add(user_id)
-            await update.message.reply_text(f"✅ ¡Usuario {user_id} autorizado con éxito! 🎉")
+            await update.message.reply_text(f"✅ Usuario {user_id} autorizado 🎉")
     except ValueError:
-        await update.message.reply_text("❌ Error: ID inválido. Usa un número para usuarios o 'group' para grupos. 🔍")
+        await update.message.reply_text("❌ ID inválido. Usa un número o 'group'. 🔍")
 
-# Comando /agregargrupo (alias para /authorize group)
+# /agregargrupo
 async def agregargrupo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        await update.message.reply_text("⛔ Solo el administrador puede usar este comando. 🔒")
         return
     group_id = update.effective_chat.id
     AUTHORIZED_GROUPS.add(group_id)
-    await update.message.reply_text(f"✅ ¡Grupo {group_id} autorizado con éxito! 🎉")
+    await update.message.reply_text(f"✅ Grupo {group_id} autorizado 🎉")
 
-# Comando /deauthorize (solo para el admin)
+# /deauthorize
 async def deauthorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        await update.message.reply_text("⛔ Solo el administrador puede usar este comando. 🔒")
         return
     if not context.args:
         await update.message.reply_text("📋 Uso: /deauthorize <user_id> o /deauthorize group")
@@ -119,18 +107,18 @@ async def deauthorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if context.args[0].lower() == "group":
             group_id = update.effective_chat.id
             AUTHORIZED_GROUPS.discard(group_id)
-            await update.message.reply_text(f"✅ ¡Grupo {group_id} desautorizado con éxito! 🚫")
+            await update.message.reply_text(f"✅ Grupo {group_id} desautorizado 🚫")
         else:
             user_id = int(context.args[0])
             AUTHORIZED_USERS.discard(user_id)
-            await update.message.reply_text(f"✅ ¡Usuario {user_id} desautorizado con éxito! 🚫")
+            await update.message.reply_text(f"✅ Usuario {user_id} desautorizado 🚫")
     except ValueError:
-        await update.message.reply_text("❌ Error: ID inválido. Usa un número para usuarios o 'group' para grupos. 🔍")
+        await update.message.reply_text("❌ ID inválido. Usa un número o 'group'. 🔍")
 
-# Comando /verusuarios (solo para el admin)
+# /verusuarios
 async def verusuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        await update.message.reply_text("⛔ Solo el administrador puede usar este comando. 🔒")
         return
     if not AUTHORIZED_USERS:
         await update.message.reply_text("📋 No hay usuarios autorizados.")
@@ -138,10 +126,10 @@ async def verusuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users_list = "\n".join([f"ID: {user_id}" for user_id in AUTHORIZED_USERS])
     await update.message.reply_text(f"📋 Usuarios autorizados:\n{users_list}")
 
-# Comando /vergrupos (solo para el admin)
+# /vergrupos
 async def vergrupos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        await update.message.reply_text("⛔ Solo el administrador puede usar este comando. 🔒")
         return
     if not AUTHORIZED_GROUPS:
         await update.message.reply_text("📋 No hay grupos autorizados.")
@@ -149,81 +137,69 @@ async def vergrupos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     groups_list = "\n".join([f"ID: {group_id}" for group_id in AUTHORIZED_GROUPS])
     await update.message.reply_text(f"📋 Grupos autorizados:\n{groups_list}")
 
-# Comando /on (solo para el admin)
+# /on
 async def turn_on(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global BOT_STATUS
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        await update.message.reply_text("⛔ Solo el administrador puede usar este comando. 🔒")
         return
     BOT_STATUS = "active"
-    await update.message.reply_text("✅ Bot encendido. Sistemas operacionales están activos. 🚀")
+    await update.message.reply_text("✅ Bot encendido 🚀")
 
-# Comando /off (solo para el admin)
+# /off
 async def turn_off(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global BOT_STATUS
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Solo el administrador (@Sangre_binerojs) puede usar este comando. 🔒")
+        await update.message.reply_text("⛔ Solo el administrador puede usar este comando. 🔒")
         return
     BOT_STATUS = "inactive"
-    await update.message.reply_text("✅ Bot apagado. Sistemas operacionales están inactivos. 🛑")
+    await update.message.reply_text("🛑 Bot apagado.")
 
-# Manejar imágenes con códigos QR usando API externa
+# Manejar fotos
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    # Verifica si el bot está activo
     if BOT_STATUS != "active":
-        await update.message.reply_text("⛔ El bot está apagado. Contacta al administrador para activarlo. 🔧")
+        await update.message.reply_text("⛔ El bot está apagado. 🔧")
         return
-    # Verifica si el usuario o grupo está autorizado
     if user_id not in AUTHORIZED_USERS and chat_id not in AUTHORIZED_GROUPS:
-        await update.message.reply_text(
-            "⛔ Acceso denegado. Solo usuarios o grupos autorizados pueden usar esta función. Contacta a @Sangre_binerojs para obtener acceso. 📩"
-        )
+        await update.message.reply_text("⛔ Acceso denegado. Contacta a @Sangre_binerojs 📩")
         return
-    # Informa que está escaneando
-    await update.message.reply_text("📸 Escaneando imagen... Por favor, espera un momento. ⏳")
+    await update.message.reply_text("📸 Escaneando imagen... ⏳")
     try:
-        # Obtiene la foto de mayor resolución
         photo = update.message.photo[-1]
         file = await photo.get_file()
-        # Descarga la imagen
         response = requests.get(file.file_path, timeout=10)
         response.raise_for_status()
-        # Envía la imagen a la API de qrserver.com
         api_url = "https://api.qrserver.com/v1/read-qr-code/"
         files = {"file": ("image.jpg", response.content)}
         api_response = requests.post(api_url, files=files, timeout=10)
         api_response.raise_for_status()
-        # Procesa la respuesta de la API
         qr_data = api_response.json()
-        if qr_data and qr_data[0]["symbol"] and qr_data[0]["symbol"][0]["data"]:
+        if qr_data and qr_data[0].get("symbol") and qr_data[0]["symbol"][0].get("data"):
             qr_content = qr_data[0]["symbol"][0]["data"]
-            # Extrae el nombre
             name = extract_name(qr_content)
             if name:
-                await update.message.reply_text(f"✅ Nombre extraído del código QR: **{name}** 🎉")
+                await update.message.reply_text(f"✅ Nombre extraído del código QR: *{name}* 🎉", parse_mode="Markdown")
             else:
-                await update.message.reply_text("❌ No se pudo extraer un nombre del código QR. Asegúrate de que el QR contenga un nombre válido. 🔍")
+                await update.message.reply_text("❌ No se pudo extraer un nombre válido del QR. 🔍")
         else:
-            await update.message.reply_text("❌ No se detectó ningún código QR en la imagen. Por favor, verifica e intenta de nuevo. 📷")
+            await update.message.reply_text("❌ No se detectó un código QR válido. 📷")
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error de red al procesar la imagen: {e}")
-        await update.message.reply_text("❌ Error de red. Por favor, verifica tu conexión a internet e intenta de nuevo. 🌐")
+        logger.error(f"Error de red: {e}")
+        await update.message.reply_text("❌ Error de red. Intenta de nuevo. 🌐")
     except Exception as e:
-        logger.error(f"Error al procesar la imagen: {e}")
-        await update.message.reply_text("❌ Error al procesar la imagen. Asegúrate de enviar una imagen válida con un código QR. 📷")
+        logger.error(f"Error procesando la imagen: {e}")
+        await update.message.reply_text("❌ Error al procesar la imagen. 📷")
 
-# Manejar errores generales
+# Manejo de errores global
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Error: {context.error}")
     if update and update.message:
-        await update.message.reply_text("❌ Ocurrió un error inesperado. Por favor, intenta de nuevo o contacta a @Sangre_binerojs. 🛠️")
+        await update.message.reply_text("❌ Ocurrió un error inesperado. Contacta a @Sangre_binerojs 🛠️")
 
 def main():
-    # Crea la aplicación del bot
     application = Application.builder().token(TOKEN).build()
-    # Agrega manejadores
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("qrgen", qrgen))
     application.add_handler(CommandHandler("authorize", authorize))
@@ -235,7 +211,6 @@ def main():
     application.add_handler(CommandHandler("off", turn_off))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_error_handler(error_handler)
-    # Inicia el bot
     application.run_polling()
 
 if __name__ == "__main__":
